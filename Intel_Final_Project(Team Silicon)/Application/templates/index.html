@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Sharpening - Powered by Knowledge Distillation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom Font: Inter for a clean, modern look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f0f4f8; /* light blue-gray */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #93c5fd; /* blue-300 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #60a5fa; /* blue-400 */
+        }
+
+        /* Basic animation for loading spinner */
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Custom button styling with gradient and shadow for impressiveness */
+        .btn-primary {
+            background-image: linear-gradient(to right, #22c55e, #14b8a6); /* green-500 to teal-600 */
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+            transform: translateY(-2px); /* Slight lift on hover */
+        }
+        .btn-primary:active {
+            transform: translateY(0); /* Press effect */
+            box-shadow: 0 2px 10px rgba(34, 197, 94, 0.3);
+        }
+        .btn-primary:disabled {
+            background-image: none;
+            background-color: #9ca3af; /* gray-400 */
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Ensure images within display area fit nicely */
+        .image-card img {
+            display: block; /* Remove extra space below image */
+            max-width: 100%;
+            height: auto;
+            object-fit: contain; /* Ensure entire image is visible within its bounds */
+        }
+        /* Specific styling for the banner image to ensure it fits well */
+        .banner-image {
+            max-width: 100%;
+            height: auto;
+            display: block; /* Remove extra space below image */
+            margin-bottom: 2rem; /* Add some space below the banner */
+            border-radius: 1rem; /* Slightly rounded corners for aesthetics */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+        }
+        /* New download button style */
+        .btn-download {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px; /* Fully rounded */
+            font-weight: 600; /* semibold */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(59, 130, 246, 0.4); /* blue shadow */
+        }
+        .btn-download:hover {
+            background-color: #2563eb; /* blue-600 */
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.6);
+        }
+        .btn-download:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-3xl shadow-2xl p-8 md:p-12 w-full max-w-5xl flex flex-col items-center transform transition-all duration-300 ease-in-out scale-95 md:scale-100">
+
+        <img src="/static/WhatsApp Image 2025-06-06 at 13.31.53_aca67b98.jpg" alt="University Banner" class="banner-image">
+
+        <h1 class="text-5xl font-extrabold text-gray-800 mb-4 flex items-center text-center">
+            <i data-lucide="sparkles" class="w-12 h-12 text-purple-600 mr-4"></i>
+            AI Image Sharpening
+        </h1>
+        <p class="text-gray-600 text-xl mb-10 text-center max-w-3xl leading-relaxed">
+            Unleash the true potential of your photos. Our advanced AI, powered by Knowledge Distillation,
+            transforms blurry images into stunningly sharp visuals.
+        </p>
+
+        <div id="drop-area"
+             class="w-full border-4 border-dashed border-blue-400 rounded-2xl p-10 text-center mb-8 cursor-pointer hover:border-blue-600 transition-colors duration-300 ease-in-out bg-blue-50 hover:bg-blue-100"
+             ondragover="handleDragOver(event)"
+             ondrop="handleDrop(event)"
+             onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept="image/*" class="hidden">
+            <i data-lucide="upload-cloud" class="w-16 h-16 mx-auto text-blue-500 mb-6"></i>
+            <p class="text-gray-800 text-2xl font-semibold mb-2">
+                Drag & Drop your image here
+            </p>
+            <p class="text-gray-600 text-lg">
+                or <span class="text-blue-700 font-bold hover:underline">click to browse</span>
+            </p>
+            <p id="fileName" class="text-gray-500 text-base mt-4 italic"></p>
+        </div>
+
+        <button id="sharpen-button"
+                class="w-full md:w-2/3 lg:w-1/2 py-4 px-8 rounded-full text-white font-bold text-xl btn-primary flex items-center justify-center disabled:opacity-50"
+                disabled>
+            <span id="button-text">
+                <i data-lucide="sparkles" class="w-6 h-6 mr-3"></i>
+                Sharpen Image
+            </span>
+            <span id="loading-spinner" class="hidden">
+                <i data-lucide="loader-2" class="w-6 h-6 mr-3 animate-spin"></i>
+                Processing...
+            </span>
+        </button>
+
+        <div id="error-message" class="mt-8 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden w-full max-w-xl flex items-center justify-center">
+            <i data-lucide="alert-triangle" class="w-6 h-6 mr-3"></i>
+            <p></p>
+        </div>
+
+        <div id="metrics-area" class="mt-8 w-full grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
+            <div class="bg-blue-50 p-6 rounded-xl shadow-md border border-blue-200 flex flex-col items-center">
+                <h3 class="text-xl font-semibold text-blue-700 mb-3 flex items-center">
+                    <i data-lucide="bar-chart-2" class="w-5 h-5 mr-2"></i>
+                    SSIM Score (vs. Blurry Input)
+                </h3>
+                <p id="ssim-score" class="text-3xl font-bold text-blue-800"></p>
+                <p class="text-sm text-gray-500 mt-2 text-center">
+                    (Lower SSIM indicates more transformation from original blurry input)
+                </p>
+            </div>
+            <div class="bg-green-50 p-6 rounded-xl shadow-md border border-green-200 flex flex-col items-center">
+                <h3 class="text-xl font-semibold text-green-700 mb-3 flex items-center">
+                    <i data-lucide="check-circle" class="w-5 h-5 mr-2"></i>
+                    Processing Status
+                </h3>
+                <p id="confidence-message" class="text-2xl font-bold text-green-800 text-center"></p>
+            </div>
+        </div>
+
+        <div id="image-display-area" class="mt-12 w-full grid grid-cols-1 md:grid-cols-2 gap-10 hidden">
+            <div class="image-card flex flex-col items-center bg-gray-50 p-6 rounded-xl shadow-lg border border-gray-200">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6 flex items-center">
+                    <i data-lucide="image" class="w-7 h-7 mr-3 text-blue-500"></i>
+                    Original Image
+                </h2>
+                <img id="original-image" src="#" alt="Original Image" class="max-w-full h-auto rounded-lg border border-gray-300 shadow-md transition-all duration-300 ease-in-out transform hover:scale-102" style="max-height: 450px;">
+            </div>
+
+            <div class="image-card flex flex-col items-center bg-gray-50 p-6 rounded-xl shadow-lg border border-gray-200">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6 flex items-center">
+                    <i data-lucide="sparkles" class="w-7 h-7 mr-3 text-purple-600"></i>
+                    Sharpened Output
+                </h2>
+                <img id="sharpened-image" src="#" alt="Sharpened Image" class="max-w-full h-auto rounded-lg border border-gray-300 shadow-md transition-all duration-300 ease-in-out transform hover:scale-102" style="max-height: 450px;">
+                <button id="download-button"
+                        class="btn-download mt-6 hidden"
+                        onclick="downloadSharpenedImage()">
+                    <i data-lucide="download" class="w-5 h-5 mr-2"></i>
+                    Download Sharpened Image (JPG)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons on the page
+        lucide.createIcons();
+
+        // --- DOM Element References ---
+        const fileInput = document.getElementById('fileInput');
+        const dropArea = document.getElementById('drop-area');
+        const fileNameSpan = document.getElementById('fileName');
+        const sharpenButton = document.getElementById('sharpen-button');
+        const buttonText = document.getElementById('button-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const errorMessageDiv = document.getElementById('error-message');
+        const errorMessageP = errorMessageDiv.querySelector('p');
+        const imageDisplayArea = document.getElementById('image-display-area');
+        const originalImage = document.getElementById('original-image');
+        const sharpenedImage = document.getElementById('sharpened-image');
+        const downloadButton = document.getElementById('download-button'); // NEW
+        // New metric display elements
+        const ssimScoreElem = document.getElementById('ssim-score');
+        const confidenceMessageElem = document.getElementById('confidence-message');
+        const metricsArea = document.getElementById('metrics-area');
+
+
+        let selectedFile = null; // Stores the currently selected file object
+
+        // IMPORTANT: Configure your backend API URL here!
+        // When Flask serves index.html, it's on the same domain/port.
+        // We can use a relative path for the API endpoint.
+        const BACKEND_API_URL = '/sharpen'; // Changed to relative path
+
+        // --- Event Listeners ---
+
+        // Listen for file input changes (when user clicks "browse")
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            handleFileSelection(file);
+        });
+
+        // Drag and drop event handlers
+        function handleDragOver(event) {
+            event.preventDefault(); // Prevent default to allow drop
+            event.stopPropagation();
+            dropArea.classList.add('border-blue-700', 'bg-blue-200'); // Visual feedback for drag over
+        }
+
+        function handleDrop(event) {
+            event.preventDefault(); // Prevent default browser file handling
+            event.stopPropagation();
+            dropArea.classList.remove('border-blue-700', 'bg-blue-200'); // Remove drag over feedback
+            const file = event.dataTransfer.files[0]; // Get the dropped file
+            handleFileSelection(file);
+        }
+
+        // Remove drag over feedback when leaving the drop area
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('border-blue-700', 'bg-blue-200');
+        });
+
+        // Listen for the sharpen button click
+        sharpenButton.addEventListener('click', processImage);
+
+        // --- Core Logic Functions ---
+
+        /**
+         * Handles the selection of an image file, updates UI, and displays original image.
+         * @param {File} file - The selected file object.
+         */
+        function handleFileSelection(file) {
+            if (file && file.type.startsWith('image/')) {
+                selectedFile = file;
+                fileNameSpan.textContent = `Selected: ${file.name}`;
+                sharpenButton.disabled = false; // Enable sharpen button
+                hideError(); // Clear any previous errors
+                hideResults(); // Hide previous images AND metrics
+                downloadButton.classList.add('hidden'); // NEW: Hide download button on new selection
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    originalImage.src = e.target.result; // Display the selected original image
+                    imageDisplayArea.classList.remove('hidden'); // Show the image display area
+                };
+                reader.readAsDataURL(file); // Read file as Data URL (Base64) for display
+            } else {
+                // Invalid file type selected
+                selectedFile = null;
+                fileNameSpan.textContent = 'Please select an image file.';
+                sharpenButton.disabled = true; // Disable sharpen button
+                showError('Please upload a valid image file (e.g., JPG, PNG).');
+                hideResults(); // Hide all results
+                downloadButton.classList.add('hidden'); // NEW: Hide download button
+            }
+        }
+
+        /**
+         * Sends the selected image to the backend for sharpening and displays the result.
+         */
+        async function processImage() {
+            if (!selectedFile) {
+                showError('No image selected. Please upload an image first.');
+                return;
+            }
+
+            setLoadingState(true); // Show loading spinner, disable button
+            hideError(); // Clear any previous errors
+            sharpenedImage.src = '#'; // Clear previous sharpened image display
+            metricsArea.classList.add('hidden'); // Hide metrics during processing
+            ssimScoreElem.textContent = ''; // Clear old metric values
+            confidenceMessageElem.textContent = '';
+            downloadButton.classList.add('hidden'); // NEW: Hide download button during processing
+
+            const reader = new FileReader();
+            reader.readAsDataURL(selectedFile); // Read the selected file as Base64
+
+            reader.onloadend = async () => {
+                // Extract only the Base64 data part (remove "data:image/jpeg;base64,")
+                const base64Image = reader.result.split(',')[1];
+
+                try {
+                    // Make a POST request to the backend API
+                    const response = await fetch(BACKEND_API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json', // Indicate JSON body
+                        },
+                        body: JSON.stringify({ image_data: base64Image }), // Send Base64 image data
+                    });
+
+                    // Check if the response was successful (HTTP status 2xx)
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({})); // Try to parse error JSON
+                        throw new Error(errorData.error || `Server responded with status ${response.status}`);
+                    }
+
+                    const data = await response.json(); // Parse the JSON response
+                    if (data.sharpened_image_data) {
+                        // Display the sharpened image received from the backend
+                        sharpenedImage.src = `data:image/jpeg;base64,${data.sharpened_image_data}`;
+                        
+                        // Display SSIM and Confidence
+                        ssimScoreElem.textContent = data.ssim_score;
+                        confidenceMessageElem.textContent = data.confidence;
+                        metricsArea.classList.remove('hidden'); // Show metrics area
+                        downloadButton.classList.remove('hidden'); // NEW: Show download button
+
+                    } else {
+                        throw new Error('No sharpened image data received from the server.');
+                    }
+
+                } catch (err) {
+                    console.error('Error processing image:', err);
+                    showError(`Failed to sharpen image: ${err.message}. Ensure backend is running and accessible.`);
+                } finally {
+                    setLoadingState(false); // Hide loading spinner, re-enable button
+                }
+            };
+        }
+
+        /**
+         * Initiates the download of the sharpened image.
+         */
+        function downloadSharpenedImage() { // NEW FUNCTION
+            const imageUrl = sharpenedImage.src;
+            if (imageUrl && imageUrl !== '#') {
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                link.download = 'sharpened_image.jpg'; // Default filename
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                console.warn("No sharpened image available for download.");
+            }
+        }
+
+        // --- UI State Management Functions ---
+
+        /**
+         * Toggles the loading state of the sharpen button.
+         * @param {boolean} isLoading - True to show loading, false to hide.
+         */
+        function setLoadingState(isLoading) {
+            sharpenButton.disabled = isLoading || !selectedFile; // Disable if loading or no file selected
+            if (isLoading) {
+                buttonText.classList.add('hidden');
+                loadingSpinner.classList.remove('hidden');
+            } else {
+                buttonText.classList.remove('hidden');
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Displays an error message to the user.
+         * @param {string} message - The error message to display.
+         */
+        function showError(message) {
+            errorMessageP.textContent = message;
+            errorMessageDiv.classList.remove('hidden');
+        }
+
+        /**
+         * Hides the error message.
+         */
+        function hideError() {
+            errorMessageDiv.classList.add('hidden');
+            errorMessageP.textContent = '';
+        }
+
+        /**
+         * Hides all results (images and metrics) and clears their content.
+         */
+        function hideResults() {
+            imageDisplayArea.classList.add('hidden');
+            metricsArea.classList.add('hidden');
+            originalImage.src = '#';
+            sharpenedImage.src = '#';
+            ssimScoreElem.textContent = '';
+            confidenceMessageElem.textContent = '';
+            downloadButton.classList.add('hidden'); // NEW: Hide download button
+        }
+
+        // --- Initial UI Setup on Page Load ---
+        // Ensure the UI starts in a clean, ready state
+        hideResults(); // Call hideResults to hide both images and metrics
+        hideError();
+        setLoadingState(false); // Ensure button is not loading on start
+    </script>
+</body>
+</html>
